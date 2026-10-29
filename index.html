@@ -1,0 +1,575 @@
+<!doctype html>
+<!--
+  Dijital Kalkan — dijital güvenlik kutu oyunu
+  © 2026 Sunay Polat (github.com/polatsunay) · Tüm hakları saklıdır.
+  Bu oyunun kodu, metinleri, soruları ve görselleri izinsiz kopyalanamaz, değiştirilemez,
+  başka bir yerde yayınlanamaz ya da satılamaz. Ayrıntılar: LICENSE dosyası.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="author" content="Sunay Polat">
+<meta name="copyright" content="© 2026 Sunay Polat. Tüm hakları saklıdır.">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dijital Kalkan</title>
+<style>
+:root{--ink:#11263c;--muted:#5a6b7d;--card:#fff;--bg1:#e6f4ff;--bg2:#fff4d6;--blue:#0a63c9;--orange:#ff9d00;--good:#14934a;--bad:#d93636;
+--msg:#5fc3ff;--shield:#5fd477;--surprise:#b97bff;--info:#ffd34f;--risk:#ff6464;--start:#dfe8f2}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:linear-gradient(135deg,var(--bg1),var(--bg2));min-height:100vh}
+button{font:inherit;cursor:pointer}
+.app{max-width:1280px;margin:0 auto;padding:14px 16px 24px}
+.top{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:20px;padding:10px 14px;box-shadow:0 6px 20px #0001}
+.avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid #1597ff;flex:none}
+.title{flex:1;min-width:0}
+.title h1{margin:0;font-size:clamp(22px,3vw,32px);color:#0758a8;letter-spacing:.5px}
+.title h1 b{color:var(--orange)}
+.title div{color:var(--muted);font-size:14px}
+.tbtn{border:0;background:#eef5ff;color:var(--blue);border-radius:12px;padding:9px 12px;font-weight:700;font-size:14px}
+.panel{background:var(--card);border-radius:20px;box-shadow:0 6px 20px #0001;padding:18px}
+.btn{border:0;border-radius:14px;padding:13px 18px;font-size:17px;font-weight:800;background:var(--blue);color:#fff}
+.btn.good{background:var(--good)}.btn.ghost{background:#eef3f8;color:var(--ink)}
+.btn:disabled{opacity:.45;cursor:default}
+
+/* Kurulum */
+.setup{max-width:720px;margin:20px auto 0;display:grid;gap:14px}
+.setup h2{margin:0 0 6px}
+.count{display:flex;gap:8px;margin:10px 0 14px}
+.count button{flex:1;border:2px solid #cfe0f1;background:#fff;border-radius:14px;padding:12px;font-size:20px;font-weight:800;color:var(--ink)}
+.count button.on{border-color:var(--blue);background:#e8f2ff;color:var(--blue)}
+.names{display:grid;gap:10px}
+.nrow{display:flex;align-items:center;gap:10px}
+.nrow .tok{width:34px;height:34px;font-size:15px}
+.nrow input{flex:1;min-width:0;padding:12px 14px;border:2px solid #cfe0f1;border-radius:12px;font-size:17px}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:6px}
+.lg{display:flex;align-items:center;gap:8px;font-size:14px}
+.lg i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-style:normal;flex:none}
+.rules{margin:8px 0 0;padding-left:20px;color:var(--muted);font-size:15px;line-height:1.5}
+
+/* Oyun */
+.game{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,.7fr);gap:14px;margin-top:14px;align-items:start}
+.board{padding:12px}
+.path{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+.cell{aspect-ratio:1;border-radius:12px;position:relative;display:flex;align-items:center;justify-content:center;font-size:clamp(16px,2.4vw,28px);box-shadow:inset 0 -3px 0 #0001}
+.cell small{position:absolute;top:3px;left:6px;font-size:11px;font-weight:800;opacity:.7}
+.cell.msg{background:var(--msg)}.cell.shield{background:var(--shield)}.cell.surprise{background:var(--surprise)}.cell.info{background:var(--info)}.cell.risk{background:var(--risk)}
+.cell.start,.cell.finish{background:var(--start);font-size:clamp(10px,1.2vw,14px);font-weight:900;text-align:center}
+.cell.finish{background:linear-gradient(135deg,#ffe27a,#ffb000)}
+.toks{position:absolute;inset:auto 2px 2px 2px;display:flex;flex-wrap:wrap;gap:2px;justify-content:center}
+.tok{width:clamp(16px,2vw,24px);height:clamp(16px,2vw,24px);border-radius:50%;border:2px solid #fff;color:#fff;display:grid;place-items:center;font-size:clamp(9px,1vw,12px);font-weight:900;box-shadow:0 2px 4px #0003;font-style:normal}
+.cell.hot{outline:4px solid #fff;outline-offset:-4px;animation:pulse .5s ease}
+@keyframes pulse{50%{transform:scale(1.08)}}
+.side{display:flex;flex-direction:column;gap:12px}
+.turnbox{text-align:center}
+.who{font-size:20px;font-weight:900;margin-bottom:6px}
+.dice{font-size:72px;line-height:1;margin:4px 0 10px;display:inline-block}
+.dice.spin{animation:spin .6s ease}
+@keyframes spin{0%{transform:rotate(0) scale(.8)}60%{transform:rotate(300deg) scale(1.15)}100%{transform:rotate(360deg) scale(1)}}
+.turnbox .btn{width:100%;font-size:22px;padding:16px}
+.status{margin-top:10px;font-weight:700;min-height:24px;color:var(--muted)}
+.plist{display:grid;gap:8px;margin-top:8px}
+.pl{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:12px;background:#f3f6fa}
+.pl.cur{outline:3px solid var(--orange);background:#fff8e6}
+.pl .grow{flex:1;min-width:0}
+.pl b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl small{color:var(--muted)}
+.pts{font-size:20px;font-weight:900;white-space:nowrap}
+
+/* Kart penceresi */
+.modal{position:fixed;inset:0;background:#0b1a2acc;display:none;align-items:center;justify-content:center;padding:14px;z-index:20}
+.modal.show{display:flex}
+.cardbox{background:#fff;border-radius:22px;width:min(780px,100%);max-height:96vh;overflow:auto;padding:18px 20px 20px;text-align:center}
+.ctitle{display:inline-block;margin:0 0 12px;padding:6px 16px;border-radius:999px;font-size:20px;font-weight:900}
+.ctitle.msg{background:var(--msg)}.ctitle.shield{background:var(--shield)}.ctitle.surprise{background:var(--surprise);color:#fff}.ctitle.info{background:var(--info)}.ctitle.risk{background:var(--risk);color:#fff}
+.forwho{color:var(--muted);font-weight:700;margin-bottom:10px}
+.crop{margin:0 auto;overflow:hidden;border-radius:14px;width:min(420px,100%,56vh)}
+.crop.sur{width:min(380px,100%,42vh)}
+.crop img{width:100%;display:block}
+.crop.risk{width:min(420px,100%,60vh)}
+.q{font-size:20px;font-weight:800;margin:14px 0 6px}
+.choices{display:grid;gap:10px;margin-top:10px}
+.choice{border:2px solid #cfe0f1;background:#f6faff;border-radius:14px;padding:14px;font-size:17px;font-weight:700;text-align:left;color:var(--ink);display:flex;gap:10px;align-items:center}
+.choice:hover:not(:disabled){border-color:var(--blue);background:#e8f2ff}
+.choice:disabled{cursor:default}
+.choice .k{flex:none;width:30px;height:30px;border-radius:50%;background:#dbe8f6;display:grid;place-items:center;font-weight:900}
+.choice.right{border-color:var(--good);background:#e5f8ec}
+.choice.wrong{border-color:var(--bad);background:#fde9e9}
+.fb{margin-top:14px;padding:14px;border-radius:14px;text-align:left;font-size:16px;line-height:1.5;display:none}
+.fb.show{display:block}
+.fb.ok{background:#e5f8ec}.fb.no{background:#fde9e9}.fb.neu{background:#eef5ff}
+.fb strong{font-size:18px}
+.next{margin-top:14px;width:100%;font-size:19px}
+
+/* Telefon */
+.hunt{display:inline-block;margin:0 0 10px;padding:6px 12px;border-radius:999px;background:#fff4cc;font-weight:800;font-size:15px}
+.phone{width:min(360px,100%);margin:0 auto;background:#1b2430;border-radius:34px;padding:10px;box-shadow:0 10px 30px #0003;text-align:left}
+.screen{background:#fff;border-radius:26px;overflow:hidden;min-height:330px;display:flex;flex-direction:column}
+.sbar{display:flex;justify-content:space-between;padding:7px 18px 3px;font-size:12px;font-weight:700}
+.apph{display:flex;align-items:center;gap:10px;padding:8px 12px 10px;border-bottom:1px solid #0001}
+.apph .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;color:#fff;flex:none;background:#8a99a8}
+.apph .nm{min-width:0;line-height:1.2}.apph .nm small{display:block;font-size:12px;opacity:.75}
+.body{flex:1;padding:14px 12px 16px;font-size:17px;line-height:1.5}
+.time{text-align:center;font-size:12px;color:#7a8794;margin-bottom:8px}
+.bub{background:#e9edf2;border-radius:18px 18px 18px 4px;padding:10px 13px;max-width:92%}
+.lnk{display:inline;color:#0a63c9;text-decoration:underline;word-break:break-all}
+.ch-sms .sbar,.ch-sms .apph{background:#f6f7f9}
+.ch-wa .sbar,.ch-wa .apph{background:#075e54;color:#fff}.ch-wa .apph .av{background:#25d366}
+.ch-wa .body{background:#efe7dd}.ch-wa .bub{background:#fff;box-shadow:0 1px 1px #0002}
+.ch-dm .sbar{background:#fff}.ch-dm .apph .av{background:linear-gradient(45deg,#f9a825,#e91e63,#7b1fa2)}
+.ch-dm .bub{background:#efefef}
+.ch-mail .sbar,.ch-mail .apph{background:#1e5bd8;color:#fff}.ch-mail .apph .av{background:#fff;color:#1e5bd8}
+.ch-mail .bub{background:none;padding:0;max-width:100%;border-radius:0}
+.mailfrom{font-size:14px;color:#56636f;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e3e7ec}
+.mbtn{display:inline-block;margin-top:10px;padding:8px 12px;border-radius:10px;background:#1e5bd8;color:#fff!important;text-decoration:none!important}
+.ch-call .screen{background:linear-gradient(180deg,#1f3b57,#0d1b2a);color:#fff}
+.ch-call .apph{flex-direction:column;border:0;padding-top:20px;text-align:center}
+.ch-call .apph .av{width:70px;height:70px;font-size:32px;background:#3c5a78}
+.ch-call .apph .nm{font-size:20px;font-weight:800}
+.ch-call .bub{background:#ffffff1f;color:#fff;border-radius:16px}
+.ch-call .say{font-size:12px;opacity:.75;margin-bottom:6px}
+.callbtns{display:flex;justify-content:space-around;padding:6px 30px 18px;font-size:24px}
+.callbtns span{width:54px;height:54px;border-radius:50%;display:grid;place-items:center}
+.cardbox.wide{width:min(960px,100%)}
+.msggrid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;align-items:start;text-align:left}
+.msggrid .hunt{display:block;text-align:center;font-size:14px}
+.mright .q{margin-top:4px}.mright .notes{margin:12px 0 0;max-width:none}.mright #verdict{text-align:left}
+@media (max-width:820px){.msggrid{grid-template-columns:1fr;text-align:center}.mright #verdict{text-align:center}}
+/* Tıklanabilir parçalar */
+.ck{cursor:pointer;border-radius:5px;padding:1px 2px;transition:background .15s;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.hunting .ck:hover{background:#fff1a8;color:#11263c}
+.ck.isflag{background:#ffd3d3;color:#8b1111;box-shadow:0 0 0 2px #e53935}
+.ck.notflag{background:#e3e9ef;color:#6b7785}
+.ck.missed{box-shadow:0 0 0 2px #e53935;border-radius:5px}
+.ch-call .ck.notflag{background:#ffffff26;color:#c9d6e3}
+.notes{max-width:520px;margin:12px auto 0;text-align:left;display:grid;gap:6px}
+.note{padding:8px 12px;border-radius:12px;font-size:15px;background:#fde9e9}
+.note.ok{background:#eef2f6;color:#56636f}.note.miss{background:#fff;border:2px dashed #e53935}
+.verdict{display:inline-block;margin-top:12px;padding:5px 12px;border-radius:999px;font-weight:900;color:#fff}
+.verdict.fake{background:var(--bad)}.verdict.real{background:var(--good)}
+
+/* Bitiş */
+.over{text-align:center}
+.over h2{font-size:30px;margin:6px 0}
+.rank{display:grid;gap:8px;max-width:460px;margin:14px auto}
+.rk{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;background:#f3f6fa;font-size:18px}
+.rk:first-child{background:#fff4cc;outline:3px solid var(--orange)}
+.rk .grow{flex:1;text-align:left;font-weight:800}
+.hidden{display:none!important}
+
+@media (max-width:860px){
+ .game{grid-template-columns:1fr}
+ .path{grid-template-columns:repeat(5,1fr)}
+ .top .sub{display:none}
+}
+@media (max-width:480px){.avatar{width:44px;height:44px}.tbtn{padding:8px 11px;font-size:18px}.tbtn .lbl{display:none}.top{gap:8px}}
+.copy{text-align:center;color:var(--muted);font-size:12px;margin:22px 0 4px;opacity:.85}
+@media print{.copy{display:block}}
+</style>
+</head>
+<body>
+<div class="app">
+ <header class="top">
+  <img class="avatar" src="assets/sunay_avatar.jpeg" alt="">
+  <div class="title"><h1>DİJİTAL <b>KALKAN</b></h1><div class="sub">Fark Et • Sorgula • Doğrula • Korun</div></div>
+  <button class="tbtn" id="fsBtn" title="Tam ekran">⛶<span class="lbl"> Tam ekran</span></button>
+  <button class="tbtn hidden" id="newBtn" title="Yeni oyun">↺<span class="lbl"> Yeni oyun</span></button>
+ </header>
+
+ <!-- KURULUM -->
+ <section class="setup" id="setup">
+  <div class="panel">
+   <h2>🎮 Kaç kişi oynayacak?</h2>
+   <div class="count" id="count"><button data-n="2">2</button><button data-n="3">3</button><button data-n="4" class="on">4</button></div>
+   <div class="names" id="names"></div>
+   <button class="btn good" id="startBtn" style="width:100%;margin-top:14px;font-size:20px">OYUNU BAŞLAT</button>
+  </div>
+  <div class="panel">
+   <h2>📋 Nasıl oynanır?</h2>
+   <ol class="rules">
+    <li>Oyuncular sırayla zar atar, piyon ilerler.</li>
+    <li>Gelinen karenin kartı açılır; o oyuncu (ya da takımı) karar verir.</li>
+    <li>Doğru kararlar <b>Kalkan Puanı</b> kazandırır, riskli kararlar puan kaybettirir.</li>
+    <li>Mesaj kartlarında 3 büyüteç hakkın var: şüpheli yerlere dokun, bulduğun her kırmızı bayrak +1 puan.</li>
+    <li>Biri <b>BİTİŞ</b>'e ulaşınca oyun biter; bitirene +3 bonus. En çok Kalkan Puanı olan kazanır.</li>
+   </ol>
+   <div class="legend">
+    <div class="lg"><i style="background:var(--msg)">✉️</i>Mesaj: kırmızı bayrakları bul, karar ver</div>
+    <div class="lg"><i style="background:var(--shield)">🛡️</i>Kalkan: güvenlik ipucu, puan kazan</div>
+    <div class="lg"><i style="background:var(--surprise)">🎁</i>Sürpriz: ne yaparsın?</div>
+    <div class="lg"><i style="background:var(--info)">💡</i>Bilgi: kısa soru</div>
+    <div class="lg"><i style="background:var(--risk)">⚠️</i>Büyük Risk: en güvenli adım</div>
+   </div>
+  </div>
+ </section>
+
+ <!-- OYUN -->
+ <section class="game hidden" id="game">
+  <main class="panel board"><div class="path" id="path"></div></main>
+  <aside class="side">
+   <div class="panel turnbox">
+    <div class="who" id="who"></div>
+    <div class="dice" id="dice">🎲</div>
+    <button class="btn" id="rollBtn">ZAR AT</button>
+    <div class="status" id="status"></div>
+   </div>
+   <div class="panel"><b>Oyuncular</b><div class="plist" id="plist"></div></div>
+  </aside>
+ </section>
+
+ <!-- BİTİŞ -->
+ <section class="panel over hidden" id="over" style="max-width:720px;margin:20px auto 0"></section>
+ <footer class="copy">© 2026 Sunay Polat · Tüm hakları saklıdır. Bu oyun izinsiz kopyalanamaz, değiştirilemez, başka yerde yayınlanamaz ve satılamaz.</footer>
+</div>
+
+<div class="modal" id="modal"><div class="cardbox" id="cardbox"></div></div>
+
+<script>
+(function(){
+'use strict';
+var COLORS=['#e63946','#1677ff','#16a34a','#f59e0b'];
+var ICON={msg:'✉️',shield:'🛡️',surprise:'🎁',info:'💡',risk:'⚠️'};
+var TITLE={msg:'✉️ MESAJ KARTI',shield:'🛡️ KALKAN KARTI',surprise:'🎁 SÜRPRİZ KARTI',info:'💡 BİLGİ KARTI',risk:'⚠️ BÜYÜK RİSK KARTI'};
+var DIE=['⚀','⚁','⚂','⚃','⚄','⚅'];
+var LAST=39, FINISH_BONUS=3;
+
+/* ---------- Kart verileri ---------- */
+// Mesaj kartları
+// ch: kanal (sms, wa, mail, call, dm) · s: gönderen · n: numara/adres · sf: göndereni şüpheli yapan şey
+// m: metin; {şüpheli kısım|neden} kırmızı bayraktır · u: bağlantı · uf: bağlantıyı şüpheli yapan şey
+// f: sahte mi · l: etiket · w: kısa özet
+var MSG=[
+ {ch:'sms',s:'GARANTİ BANKASI',t:'09:12',m:'Sayın müşterimiz, hesabınızın güvenliği için {bilgilerinizi güncellemeniz gerekmektedir.|Bankalar bilgi güncellemesini mesajla istemez.} {Hemen|“Hemen” diyerek acele ettiriyor.} aşağıdaki bağlantıya tıklayınız.',u:'https://guvenli-bank.com',uf:'Bu adres bankanın resmî adresi değil.',f:1,l:'SAHTE BANKA MESAJI',w:'Bankalar bilgi güncellemesi için link göndermez. Hesabını yalnızca bankanın kendi uygulamasından kontrol et.'},
+ {ch:'sms',s:'KARGO EXPRESS',t:'Dün 14:25',m:'Kargonuz adresinize teslim edilemedi. Tekrar dağıtım için {aşağıdaki bağlantıdan işlem yapınız.|Beklemediğin bir kargo için link gönderiyor.}',u:'https://kargo-takip.net',uf:'Kargo firmasının resmî adresi değil.',f:1,l:'SAHTE KARGO MESAJI',w:'Kargonu yalnızca firmanın resmî uygulamasından ya da sitesinden takip et.'},
+ {ch:'sms',s:'SANSLI-CEKILIS',sf:'Gönderen tanınan bir kurum değil.',t:'11:03',m:'{Tebrikler! 20.000 TL ödül kazandınız.|Katılmadığın bir çekilişi kazanamazsın.} Ödülünüzü almak için {hemen tıklayın.|Acele ettirip linke yönlendiriyor.}',u:'https://odul-senindir.com',uf:'Tanınmayan, ödül vaat eden bir site.',f:1,l:'SAHTE ÖDÜL MESAJI',w:'Gerçek olamayacak kadar iyi teklifler dolandırıcılık işaretidir.'},
+ {ch:'wa',s:'+90 532 418 77 05',sf:'Rehberinde kayıtlı olmayan, yeni bir numara.',t:'18:45',m:'Merhaba anneanne, {telefonum bozuldu. Bu benim yeni numaram.|“Yeni numara” bahanesi klasik bir tuzaktır.} {Acil para gönderebilir misin?|Acil para istiyor.} {Daha sonra açıklayacağım.|Soru sormanı engellemek istiyor.}',f:1,l:'SAHTE YAKIN / TORUN',w:'Yakınını eski numarasından arayarak ya da başka bir aile üyesine sorarak doğrula.'},
+ {ch:'sms',s:'TC-EMNIYET',sf:'Kurum adı taklit edilebilir; Emniyet bu yolla dosya bildirmez.',t:'16:20',m:'{Adınıza açılmış bir dosya bulunmaktadır.|Korkutarak panik yaratıyor.} Detaylı bilgi için {hemen arayınız: 0 (850) 555 11 22|Seni dolandırıcının numarasına yönlendiriyor.}',f:1,l:'SAHTE KAMU KURUMU',w:'Emniyet ya da savcılık SMS ile dosya bildirip seni bir numarayı aramaya yönlendirmez.'},
+ {ch:'mail',s:'Sağlık Duyurusu',n:'kampanya@saglikurun.com',sf:'Bir sağlık kurumunun değil, satış sitesinin adresi.',t:'10:15',m:'Yeni geliştirilen {mucize ilaç|“Mucize” ilaç yoktur.} ile şeker ve tansiyon sorunlarından kurtulun! {Sadece bugün %50 indirim.|“Sadece bugün” diyerek acele ettiriyor.}',u:'https://saglikurun.com',uf:'İlaç linkle satılmaz; yalnızca doktor ve eczane.',f:1,l:'SAHTE SAĞLIK ÜRÜNÜ',w:'İlaç yalnızca doktor önerisiyle eczaneden alınır.'},
+ {ch:'sms',s:'HASTANE RANDEVU',t:'Dün 12:00',m:'Sayın hastamız, randevunuz yarın 10.30\'dadır. Lütfen zamanında geliniz.',f:0,l:'GERÇEK MESAJ',w:'Link yok; para ya da bilgi istemiyor. Aldığın bir randevuyla uyuşuyorsa güvenlidir.'},
+ {ch:'sms',s:'SU İDARESİ',t:'09:20',m:'Su faturanız 325 TL\'dir. Son ödeme tarihi 25.08.2025\'tir.',u:'https://e-islemler.gov.tr',f:0,l:'GERÇEK KURUM MESAJI',w:'Tehdit ya da acele yok; adres “.gov.tr” ile bitiyor. Yine de ödemeyi kendi bankacılık uygulamandan yap.'},
+ {ch:'sms',s:'IS-FIRSATI',sf:'Gönderen tanınan bir şirket değil.',t:'13:40',m:'Evden çalışarak {ayda 50.000 TL kazanmak|Emeksiz, gerçek dışı kazanç vaadi.} ister misiniz? Detaylar için aşağıdaki bağlantıya tıklayın.',u:'https://kolay-para.com',uf:'Adı bile şüpheli: “kolay para”.',f:1,l:'SAHTE İŞ İLANI',w:'Bu linkler genelde kişisel bilgi ya da “kayıt ücreti” ister.'},
+ {ch:'mail',s:'Alışveriş Sitesi',n:'bildirim@siparis-iptal.com',sf:'Gönderen adres alışveriş sitesinin kendi adresi değil.',t:'15:12',m:'{Hesabınızdan 9.999 TL tutarında alışveriş yapılmıştır.|Yüksek tutarla panik yaratıyor.} Eğer siz yapmadıysanız {hemen tıklayın.|Acele ettirip linke yönlendiriyor.}',u:'https://siparis-iptal.com',uf:'Alışveriş sitesinin resmî adresi değil.',f:1,l:'SAHTE ALIŞVERİŞ MESAJI',w:'Hesabını mesajdaki linkle değil, sitenin resmî uygulamasından kontrol et.'},
+ {ch:'call',s:'Bilinmeyen Numara',n:'0 850 302 41 19',sf:'Kendini banka olarak tanıtıyor ama numarayı doğrulayamıyorsun.',t:'17:10',m:'Bankanızdan arıyoruz. {Hesabınızda şüpheli işlem var.|Korkutarak panik yaratıyor.} {Bilgilerinizi doğrulamamız gerekiyor.|Banka telefonda şifre, kart bilgisi ya da kod istemez.}',f:1,l:'SAHTE TELEFON ARAMASI',w:'Kapat ve bankanın kartının arkasındaki numarayı kendin ara.'},
+ {ch:'dm',s:'video.dunyasi_24',sf:'Tanımadığın bir hesap.',t:'21:05',m:'{Bu videoda sizi çok şaşırtacak bir şey var!|Merak uyandırarak tıklatmaya çalışıyor.} {Hemen izlemek için tıklayın.|Acele ettiriyor.}',u:'https://video-izle.net',uf:'Belirsiz bir video sitesi; hesap şifreni isteyebilir.',f:1,l:'SAHTE VİDEO BAĞLANTISI',w:'Gönderen tanıdık olsa bile hesabı çalınmış olabilir.'},
+ {ch:'sms',s:'E-DEVLET',t:'08:55',m:'{E-Devlet hesabınız askıya alınmıştır.|Korkutarak panik yaratıyor.} Hesabınızı açmak için {hemen giriş yapınız.|Şifreni sahte sayfaya yazdırmak istiyor.}',u:'https://e-devlet-giris.net',uf:'e-Devlet\'in resmî adresi turkiye.gov.tr\'dir.',f:1,l:'SAHTE E-DEVLET MESAJI',w:'e-Devlet\'e her zaman adresi kendin yazarak gir.'},
+ {ch:'dm',s:'altin.uzmani.pro',sf:'Tanımadığın, kendini uzman diye tanıtan bir hesap.',t:'11:30',m:'Altın, döviz ve hisse senedinde {garantili kazanç!|Yatırımda garanti yoktur.} Uzman desteği ile {hemen yatırım yapın.|Acele ettiriyor.}',u:'https://yatirim-firsat.com',uf:'Lisanslı bir aracı kurumun adresi değil.',f:1,l:'SAHTE YATIRIM MESAJI',w:'Bu tür mesajlar sahte platformlara para yatırtır.'},
+ {ch:'dm',s:'ece.yeni.arkadas',sf:'Tanımadığın bir hesap.',t:'19:18',m:'Merhaba, {seni bir sosyal ağda gördüm.|Seni tanımayan biri yazıyor.} Tanışmak ister misin? {Daha fazla fotoğraf için tıklayın.|Linkle seni başka bir siteye çekiyor.}',u:'https://tanisma-sohbet.com',uf:'Tanınmayan bir site.',f:1,l:'SAHTE ARKADAŞLIK MESAJI',w:'Tıklama, engelle ve bildir.'},
+ {ch:'sms',s:'VERGI-DAIRESI',sf:'Gelir İdaresi bu şekilde ödeme istemez.',t:'09:50',m:'Vergi borcunuz bulunmaktadır. {Yasal işlem başlatılmaması için|Tehditle korkutuyor.} {hemen ödeme yapınız.|Acele ettirip ödeme istiyor.}',u:'https://vergi-odeme.net',uf:'Gelir İdaresi\'nin resmî adresi değil.',f:1,l:'SAHTE VERGİ MESAJI',w:'Vergi borcu yalnızca resmî Gelir İdaresi kanallarından kontrol edilir.'},
+ {ch:'sms',s:'OKUL',t:'13:15',m:'Değerli velimiz, okul toplantımız yarın saat 16.00\'da yapılacaktır. Katılımınız rica olunur.',f:0,l:'GERÇEK OKUL MESAJI',w:'Bilgi veriyor; link, para ya da kişisel bilgi istemiyor. Acele ya da tehdit yok.'},
+ {ch:'mail',s:'Teknik Destek',n:'uyari@guvenli-temizle.com',sf:'Hiçbir şirkete ait olmayan bir adres.',t:'14:40',m:'{Bilgisayarınızda virüs tespit edildi.|Bir mesaj bilgisayarındaki virüsü göremez.} Cihazınızı temizlemek için {hemen bu uygulamayı indirin.|Bilinmeyen bir uygulama indirtiyor.}',u:'https://guvenli-temizle.com',uf:'İndirttiği uygulamanın kendisi zararlı olabilir.',f:1,l:'SAHTE TEKNİK DESTEK',w:'Uygulamaları yalnızca resmî mağazalardan indir.'},
+ {ch:'wa',s:'Babaannem ❤️',t:'09:30',m:'Nasılsın? Yarın size gelmek istiyoruz. Uygun musunuz? Görüşmek üzere. ❤️',f:0,l:'GERÇEK AİLE MESAJI',w:'Kayıtlı bir aile üyesinden geliyor; para, link ya da bilgi istemiyor.'},
+ {ch:'sms',s:'FATURA-ODEME',sf:'Elektrik şirketinin adı yerine genel bir isim.',t:'17:55',m:'Elektrik faturanız ödenmemiştir. {24 saat içinde|Süre vererek acele ettiriyor.} ödeme yapılmazsa {elektriğiniz kesilecektir.|Tehditle korkutuyor.}',u:'https://fatura-odeme.org',uf:'Dağıtım şirketinin resmî adresi değil.',f:1,l:'SAHTE FATURA MESAJI',w:'Faturanı kendi bankacılık ya da şirket uygulamandan kontrol et.'},
+ {ch:'dm',s:'kripto.kazan.tr',sf:'Tanımadığın bir hesap.',t:'20:12',m:'{Sınırlı süre!|Süre baskısı yapıyor.} {%300 kazanç fırsatı.|Gerçek dışı kazanç vaadi.} Hemen üye olun ve yatırımlarınıza başlayın.',u:'https://kripto-kazanc.com',uf:'Tanınmayan bir yatırım sitesi.',f:1,l:'SAHTE KRİPTO PARA MESAJI',w:'Yüksek kazanç vaadi en yaygın dolandırıcılık yöntemidir.'},
+ {ch:'sms',s:'BELEDİYE',t:'11:00',m:'Mahallenizde su kesintisi olacaktır. 26 Ağustos saat 10.00–16.00 arasında planlı bakım çalışması yapılacaktır.',f:0,l:'GERÇEK DUYURU',w:'Yalnızca bilgi veriyor; link, para ya da kişisel bilgi istemiyor.'},
+ {ch:'sms',s:'DESTEK-HATTI',sf:'Hangi şirketin desteği olduğu belli değil.',t:'16:45',m:'{Hesabınız hacklendi.|Hangi hesap olduğunu bile söylemeden korkutuyor.} Güvenliğiniz için {hemen bizi arayın: 0 (850) 444 22 33|Seni dolandırıcının numarasına yönlendiriyor.} veya şu bağlantıya tıklayın.',u:'https://destek-yardim.com',uf:'Hiçbir şirkete ait olmayan bir adres.',f:1,l:'SAHTE DESTEK HATTI',w:'Şüphe ediyorsan şifreni hesabın resmî uygulamasından değiştir.'},
+ {ch:'mail',s:'Tatil Fırsatı',n:'firsat@tatil-indirim.com',t:'12:30',m:'5 yıldızlı otellerde {%70 indirimli|Gerçek olamayacak kadar iyi bir indirim.} tatil fırsatı! {Sadece bugün geçerli.|Süre baskısı yapıyor.}',u:'https://tatil-indirim.com',uf:'Tanınmayan bir rezervasyon sitesi.',f:1,l:'SAHTE TATİL MESAJI',w:'Rezervasyonu yalnızca bilinen sitelerden yap.'},
+ {ch:'sms',s:'HAVA DURUMU',t:'08:20',m:'Bugün ilinizde hava sıcaklığı 28°C olacak. Parçalı bulutlu geçmesi bekleniyor.',f:0,l:'GERÇEK BİLGİ MESAJI',w:'Yalnızca bilgi veriyor, senden hiçbir şey istemiyor.'},
+ {ch:'sms',s:'GUVENLIK-KAMERA',sf:'Hiçbir şirkete ait olmayan bir gönderen.',t:'19:05',m:'Evinizin güvenlik kamerası görüntülerini izlemek için {aşağıdaki uygulamayı hemen indirin.|Uygulamayı mağazadan değil, linkten indirtiyor.}',u:'https://kamera-izle.com',uf:'Bilinmeyen linkten gelen uygulama telefonunu ele geçirebilir.',f:1,l:'SAHTE GÜVENLİK MESAJI',w:'Uygulamaları yalnızca resmî mağazalardan indir.'},
+ {ch:'mail',s:'Av. Mark Wilson',n:'mark.wilson.law88@gmail.com',sf:'Avukatlar ve kurumlar kişisel e-posta adresi kullanmaz.',t:'14:10',m:'{Yurtdışında yaşayan bir yakınınız size miras bıraktı.|Tanımadığın bir mirasçı: klasik dolandırıcılık.} İşlemi başlatmak için {bilgilerinizi girin.|Kişisel bilgilerini istiyor.}',u:'https://miras-odeme.com',uf:'Tanınmayan bir site.',f:1,l:'SAHTE MİRAS MESAJI',w:'Amaç bilgilerini ya da “işlem masrafı” diye paranı almak.'},
+ {ch:'sms',s:'NVI',t:'10:50',m:'Yeni kimlik kartlarınız adrese teslim edilecektir. Detaylar için nvi.gov.tr adresini ziyaret ediniz.',f:0,l:'GERÇEK KURUM MESAJI',w:'Link vermek yerine resmî “.gov.tr” adresini kendin yazmanı söylüyor; para ya da bilgi istemiyor.'},
+ {ch:'sms',s:'KARIYER-IS',sf:'Tanınan bir şirket değil.',t:'18:20',m:'{Part-time iş imkânı!|Başvurmadığın bir iş teklifi.} Haftada 3 gün, evden çalışma. Detaylı bilgi için tıklayın.',u:'https://evden-calis.com',uf:'Tanınmayan bir site.',f:1,l:'SAHTE İŞ TEKLİFİ',w:'Kişisel bilgilerini ya da “kayıt ücreti” ister.'},
+ {ch:'wa',s:'+90 541 903 26 48',sf:'Rehberinde kayıtlı olmayan bir numara.',t:'22:05',m:'Merhaba, {bu benim yeni numaram.|Kim olduğunu söylemeden “yeni numara” diyor.} WhatsApp\'tan görüşelim.',u:'https://wa.me/905xxxxxxxxx',uf:'Seni başka bir sohbete çekmek istiyor.',f:1,l:'SAHTE NUMARA MESAJI',w:'Önce eski numarasından ya da yüz yüze doğrula.'}
+];
+// Kalkan kartı puanları (kart görselindeki değerler)
+var SHIELD=[2,3,3,3,2,3,2,3,2,2,3,2,2,2,3];
+// Sürpriz kartları: c = doğru seçenek, x = yanlış seçenek, p = puanlar; dice = zar kartı
+var SUR=[
+ {c:'Önce torunumu eski numarasından ya da ailemden arayıp doğrularım',x:'İstediği parayı hemen gönderirim',p:[2,-2]},
+ {dice:1},
+ {c:'Mesajın şüpheli olduğunu fark eder, tıklamam',x:'Hediyemi almak için mesaja tıklarım',p:[3,-3]},
+ {c:'Önce araştırıp doğrularım',x:'Kaçırmamak için hemen rezervasyon yaparım',p:[2,-2]},
+ {c:'Bilgi vermem, bankamı resmî numarasından ararım',x:'Görevli olduğu için istediği bilgileri paylaşırım',p:[3,-3]},
+ {c:'Uyarının sahte olduğunu anlar, numarayı aramam',x:'Virüsü temizlemek için numarayı ararım',p:[2,-2]},
+ {c:'İsteği reddeder, şüpheli hesabı bildiririm',x:'Arkadaşlık isteğini kabul ederim',p:[2,-2]},
+ {c:'Önce başka bir kanaldan doğrularım',x:'Acil olduğu için hemen para gönderirim',p:[3,-3]},
+ {c:'Şüpheli olduğunu fark eder, anketi doldurmam',x:'Para kazanmak için anketi doldururum',p:[2,-2]},
+ {c:'Bankamı resmî kanaldan kontrol ederim',x:'Mesajdaki linke tıklayıp işleme bakarım',p:[2,-3]}
+];
+// Büyük risk kartları (A, B yanlış; C doğru)
+var RISK=[
+ {o:['Bağlantıya tıklayıp bilgileri girerim','Mesaja cevap verip sorunumu yazarım','Resmî uygulamadan ya da bankanın kendi iletişim kanalından kontrol ederim'],w:'Bilgilerini girersen dolandırıcılar hesabına erişip paranı çekebilir.'},
+ {o:['Hemen para gönderirim','Mesajla daha çok bilgi isterim','Ailedeki başka birini arayarak ya da eski numarasından doğrularım'],w:'Para gönderirsen geri almak çok zordur. Dolandırıcılar tanıdık adları kullanır.'},
+ {o:['Hemen yatırım yaparım','Daha fazla bilgi almak için başvururum','Resmî kurumları araştırır, güvenilir olup olmadığını kontrol ederim'],w:'Sahte platformlar yüksek kazanç vaadiyle insanların parasını alır.'}
+];
+// Bilgi soruları: a[0] her zaman doğru cevap (gösterirken karıştırılır)
+var INFO=[
+ {q:'Şüpheli bir mesaj aldığında en güvenli ilk adım nedir?',a:['Kurumu resmî kanalından arayıp doğrulamak','Bağlantıya tıklayıp bakmak','Mesajı tüm rehbere iletmek','Hemen cevap yazmak'],w:'Mesajdaki numara ya da link değil, kurumun resmî kanalı kullanılır.'},
+ {q:'Hangisi güçlü bir şifredir?',a:['Kalem!Mavi7Deniz','123456','adsoyad2010','sifre'],w:'Uzun, harf-rakam-sembol karışık ve tahmin edilemeyen şifreler güçlüdür.'},
+ {q:'Bankandan gelen bir SMS onay kodunu biri telefonla senden istiyor. Ne yaparsın?',a:['Kimseye vermem, aramayı kapatırım','Banka görevlisiyse veririm','Yarısını söylerim','Kodu mesajla gönderirim'],w:'Onay kodu yalnızca sana özeldir; banka bile istemez.'},
+ {q:'Bir web adresinin resmî olup olmadığını anlamak için neye bakarsın?',a:['Adresin tam yazımına (örneğin .gov.tr)','Sitenin renklerine','Logo olup olmadığına','Sayfanın hızına'],w:'Sahte siteler logo ve renkleri kopyalar; adresin yazımı ele verir.'},
+ {q:'İki aşamalı doğrulama ne işe yarar?',a:['Şifren çalınsa bile hesaba girişi zorlaştırır','İnterneti hızlandırır','Şifreyi gereksiz kılar','Reklamları engeller'],w:'Şifreye ek olarak telefonuna gelen bir kod gerekir.'},
+ {q:'Uygulamaları nereden indirmek güvenlidir?',a:['Resmî uygulama mağazasından','SMS ile gelen linkten','Tanımadığım bir siteden','Sosyal medya reklamından'],w:'Resmî mağazalar uygulamaları denetler.'},
+ {q:'Dolandırıcıların en sık kullandığı duygu hangisidir?',a:['Acele ve korku','Sabır','Merak etmemek','Güven duymamak'],w:'“Hemen”, “acil”, “son gün” gibi ifadelerle düşünmeni engellemeye çalışırlar.'},
+ {q:'Herkese açık (şifresiz) bir Wi-Fi ağında hangisini yapmamalısın?',a:['Bankacılık işlemi','Hava durumuna bakmak','Haber okumak','Müzik dinlemek'],w:'Şifresiz ağlarda gönderilen bilgiler başkalarınca görülebilir.'},
+ {q:'Dolandırıcılık girişimiyle karşılaştığında ne yapmalısın?',a:['Yetkililere bildirir, yakınlarımı uyarırım','Kimseye söylemem','Dolandırıcıya cevap yazarım','Mesajı saklayıp unuturum'],w:'Bildirmek başkalarının da kandırılmasını önler.'},
+ {q:'Sosyal medyada hangisini paylaşmak risklidir?',a:['Ev adresim ve tatile çıktığımız tarihler','Sevdiğim kitap','Bir manzara fotoğrafı','Okulumun spor başarısı'],w:'Adres ve evde olmadığın zamanlar kötü niyetli kişilerin işine yarar.'},
+ {q:'Telefon ve bilgisayar güncellemeleri neden önemlidir?',a:['Güvenlik açıklarını kapatır','Şarjı hemen doldurur','Mesajları siler','Sadece görünümü değiştirir'],w:'Güncellemeler bilinen açıkları kapatarak cihazı korur.'},
+ {q:'Tanıdığın birinin hesabından “acil para lazım” mesajı geldi. Ne yaparsın?',a:['Onu telefonla arayıp doğrularım','Hemen gönderirim','Hesap numarasını sorarım','Başkasına da iletirim'],w:'Hesaplar çalınabilir; sesli arama ya da yüz yüze doğrulama gerekir.'}
+];
+
+/* ---------- Yardımcılar ---------- */
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function range(n){var a=[];for(var i=0;i<n;i++)a.push(i);return a}
+function typeOf(i){if(i===0)return 'start';if(i===LAST)return 'finish';return ['msg','shield','surprise','info','risk'][i%5]}
+function pad(n){return String(n).padStart(2,'0')}
+function save(){try{localStorage.setItem('dk-oyun',JSON.stringify(G))}catch(e){}}
+function load(){try{return JSON.parse(localStorage.getItem('dk-oyun')||'null')}catch(e){return null}}
+function clear(){try{localStorage.removeItem('dk-oyun')}catch(e){}}
+
+/* ---------- Kurulum ---------- */
+var count=4, savedNames=['','','',''];
+function renderNames(){
+ var h='';
+ for(var i=0;i<count;i++)h+='<div class="nrow"><i class="tok" style="background:'+COLORS[i]+'">'+(i+1)+'</i><input maxlength="18" data-i="'+i+'" placeholder="'+(i+1)+'. oyuncu / takım adı" value="'+esc(savedNames[i])+'"></div>';
+ $('names').innerHTML=h;
+ [].forEach.call($('names').querySelectorAll('input'),function(inp){inp.oninput=function(){savedNames[+inp.dataset.i]=inp.value}});
+}
+[].forEach.call($('count').querySelectorAll('button'),function(b){b.onclick=function(){count=+b.dataset.n;[].forEach.call($('count').children,function(x){x.classList.toggle('on',x===b)});renderNames()}});
+renderNames();
+
+var G=null;
+$('startBtn').onclick=function(){
+ var players=[];
+ for(var i=0;i<count;i++){var n=(savedNames[i]||'').trim()||((i+1)+'. Oyuncu');players.push({name:n.slice(0,18),color:COLORS[i],pos:0,score:0})}
+ G={players:players,turn:0,phase:'roll',dice:null,status:'',decks:{msg:shuffle(range(30)),shield:shuffle(range(15)),surprise:shuffle(range(10)),risk:shuffle(range(3)),info:shuffle(range(INFO.length))},card:null,winner:null};
+ G.status='İlk sıra: '+players[0].name;
+ save();show();
+};
+function draw(type){var d=G.decks[type];if(!d.length){d=G.decks[type]=shuffle(range({msg:30,shield:15,surprise:10,risk:3,info:INFO.length}[type]))}return d.shift()}
+
+/* ---------- Ekranlar ---------- */
+function show(){
+ var playing=!!G;
+ $('setup').classList.toggle('hidden',playing);
+ $('game').classList.toggle('hidden',!playing||G.phase==='over');
+ $('over').classList.toggle('hidden',!playing||G.phase!=='over');
+ $('newBtn').classList.toggle('hidden',!playing);
+ if(!playing)return;
+ if(G.phase==='over'){renderOver();return}
+ renderBoard();renderSide();
+ if(G.phase==='card'&&G.card){if(G.card.done)nextTurn();else openCard()}
+}
+function renderBoard(hot){
+ var cols=window.matchMedia('(max-width:860px)').matches?5:8;
+ var rows=Math.ceil(40/cols),order=[];
+ for(var r=0;r<rows;r++){var row=[];for(var c=0;c<cols;c++)row.push(r*cols+c);if(r%2)row.reverse();order=order.concat(row)}
+ var h='';
+ order.forEach(function(i){
+  var t=typeOf(i),here=G.players.filter(function(p){return p.pos===i});
+  var label=t==='start'?'BAŞLA':t==='finish'?'🏁<br>BİTİŞ':ICON[t];
+  h+='<div class="cell '+t+(hot===i?' hot':'')+'"><small>'+(i+1)+'</small>'+label+'<span class="toks">'+here.map(function(p){return '<i class="tok" style="background:'+p.color+'">'+esc(p.name.charAt(0).toUpperCase())+'</i>'}).join('')+'</span></div>';
+ });
+ $('path').innerHTML=h;
+}
+function renderSide(){
+ var cur=G.players[G.turn];
+ $('who').innerHTML='Sıra: <span style="color:'+cur.color+'">'+esc(cur.name)+'</span>';
+ $('rollBtn').disabled=G.phase!=='roll';
+ $('status').textContent=G.status||'';
+ if(G.dice)$('dice').textContent=DIE[G.dice-1];
+ $('plist').innerHTML=G.players.map(function(p,i){return '<div class="pl'+(i===G.turn?' cur':'')+'"><i class="tok" style="background:'+p.color+'">'+esc(p.name.charAt(0).toUpperCase())+'</i><div class="grow"><b>'+esc(p.name)+'</b><small>'+(p.pos+1)+'. kare</small></div><span class="pts">🛡️ '+p.score+'</span></div>'}).join('');
+}
+
+/* ---------- Zar ve hareket ---------- */
+function roll(){
+ if(!G||G.phase!=='roll')return;
+ G.phase='moving';
+ var d=1+Math.floor(Math.random()*6),p=G.players[G.turn],dz=$('dice');
+ $('rollBtn').disabled=true;
+ dz.classList.remove('spin');void dz.offsetWidth;dz.classList.add('spin');
+ var k=0,iv=setInterval(function(){dz.textContent=DIE[Math.floor(Math.random()*6)];if(++k>7){clearInterval(iv);dz.textContent=DIE[d-1];G.dice=d;step(p,Math.min(LAST,p.pos+d),d)}},70);
+}
+function step(p,target,d){
+ G.status=p.name+' '+d+' attı.';$('status').textContent=G.status;
+ var iv=setInterval(function(){
+  if(p.pos<target){p.pos++;renderBoard(p.pos);renderSide();return}
+  clearInterval(iv);
+  setTimeout(function(){land(p)},350);
+ },260);
+}
+function land(p){
+ var t=typeOf(p.pos);
+ if(t==='finish'){p.score+=FINISH_BONUS;G.winnerBy=G.turn;G.phase='over';save();show();return}
+ var no=draw(t);
+ G.card={type:t,no:no,done:false,order:null};
+ G.phase='card';save();openCard();
+}
+$('rollBtn').onclick=roll;
+document.addEventListener('keydown',function(e){if((e.code==='Space'||e.code==='Enter')&&G&&G.phase==='roll'&&!$('modal').classList.contains('show')&&document.activeElement.tagName!=='INPUT'){e.preventDefault();roll()}});
+
+/* ---------- Kartlar ---------- */
+function openCard(){
+ var c=G.card,p=G.players[G.turn],h='';
+ h+='<div class="ctitle '+c.type+'">'+TITLE[c.type]+'</div><div class="forwho">'+esc(p.name)+' • '+(p.pos+1)+'. kare</div>';
+ if(c.type==='msg'){
+  if(!c.taps)c.taps=[];
+  if(!c.order)c.order=shuffle([0,1]);
+  h+='<div class="msggrid"><div><div class="hunt" id="hunt"></div><div id="phoneWrap"></div></div><div class="mright"><div class="q">Bu mesaj gerçek mi, sahte mi?</div><div class="choices" id="choices"></div><div id="verdict"></div><div class="notes" id="notes"></div><div class="fb" id="fb"></div><button class="btn good next hidden" id="nextBtn">DEVAM ▶</button></div></div>';
+ }else if(c.type==='shield'){
+  h+='<div class="crop"><img src="assets/05_Kalkan_Kartlari/Kalkan_Karti_'+pad(c.no+1)+'.png" alt="Kalkan kartı '+(c.no+1)+'"></div>';
+  h+='<div class="q">Kartı yüksek sesle oku. Bu kalkan artık senin!</div>';
+ }else if(c.type==='surprise'){
+  h+='<div class="crop sur" id="crop" data-f="'+(c.done?1:.68)+'"><img onload="dkFit(this)" src="assets/02_Surpriz_Kartlari/Surpriz_Karti_'+pad(c.no+1)+'.png" alt="Sürpriz kartı '+(c.no+1)+'"></div>';
+  h+='<div class="q">'+(SUR[c.no].dice?'Zar at ve sonucu gör!':'Bu durumda ne yaparsın?')+'</div>';
+  if(!c.order)c.order=shuffle([0,1]);
+ }else if(c.type==='risk'){
+  h+='<div class="crop risk" id="crop" data-f="'+(c.done?1:.365)+'"><img onload="dkFit(this)" src="assets/06_Buyuk_Risk_Kartlari/Buyuk_Risk_Karti_'+pad(c.no+1)+'.png" alt="Büyük risk kartı '+(c.no+1)+'"></div>';
+  h+='<div class="q">Ne yapmalısın?</div>';
+  if(!c.order)c.order=shuffle([0,1,2]);
+ }else if(c.type==='info'){
+  h+='<div class="q" style="font-size:22px">'+esc(INFO[c.no].q)+'</div>';
+  if(!c.order)c.order=shuffle([0,1,2,3]);
+ }
+ if(c.type!=='msg')h+='<div class="choices" id="choices"></div><div class="fb" id="fb"></div><button class="btn good next hidden" id="nextBtn">DEVAM ▶</button>';
+ $('cardbox').classList.toggle('wide',c.type==='msg');
+ $('cardbox').innerHTML=h;$('modal').classList.add('show');$('cardbox').scrollTop=0;
+ buildChoices();
+ save();
+}
+
+/* ---------- Telefon ve kırmızı bayrak avı ---------- */
+var MAXTAPS=3;
+function parseMsg(o){
+ var m=o.m,out=[],re=/\{([^|}]+)\|([^}]+)\}/g,last=0,r,k=0;
+ function plain(t){t.split(/(?<=[.,!?:])\s+/).forEach(function(x){if(x.trim())out.push({id:'k'+(k++),t:x.trim(),why:null})})}
+ while((r=re.exec(m))){plain(m.slice(last,r.index));out.push({id:'k'+(k++),t:r[1],why:r[2]});last=re.lastIndex}
+ plain(m.slice(last));return out;
+}
+function flagOf(m,id){if(id==='s')return m.sf||null;if(id==='u')return m.uf||null;var p=parseMsg(m).filter(function(x){return x.id===id})[0];return p?p.why:null}
+function allFlags(m){var a=[];if(m.sf)a.push('s');parseMsg(m).forEach(function(x){if(x.why)a.push(x.id)});if(m.uf)a.push('u');return a}
+function foundFlags(){var m=MSG[G.card.no];return Math.min(MAXTAPS,G.card.taps.filter(function(id){return !!flagOf(m,id)}).length)}
+function ck(id,html){
+ var c=G.card,m=MSG[c.no],cls='ck';
+ if(c.taps.indexOf(id)>=0)cls+=flagOf(m,id)?' isflag':' notflag';
+ else if(c.verdict&&flagOf(m,id))cls+=' missed';
+ return '<span class="'+cls+'" data-ck="'+id+'">'+html+'</span>';
+}
+function drawPhone(){
+ var c=G.card,m=MSG[c.no],ch=m.ch,parts=parseMsg(m);
+ var txt=parts.map(function(x){return ck(x.id,esc(x.t))}).join(' ');
+ var link=m.u?ck('u',esc(m.u)):'';
+ var ic={sms:'💬',wa:'👤',dm:'👤',mail:'✉️',call:'📞'}[ch];
+ if(ch==='sms'&&!m.sf)ic=esc(m.s.charAt(0));
+ var head='',body='';
+ if(ch==='call'){
+  head='<div class="apph"><span class="av">👤</span><div class="nm">'+ck('s',esc(m.s))+'<small>'+esc(m.n)+'</small></div><small>Gelen arama • '+esc(m.t)+'</small></div>';
+  body='<div class="body"><div class="say">Arayan kişi diyor ki:</div><div class="bub">“'+txt+'”</div></div><div class="callbtns"><span style="background:#e53935">📵</span><span style="background:#2e7d32">📞</span></div>';
+ }else if(ch==='mail'){
+  head='<div class="apph"><span class="av">✉️</span><div class="nm"><b>Gelen Kutusu</b></div></div>';
+  body='<div class="body"><div class="mailfrom">Kimden: '+ck('s','<b>'+esc(m.s)+'</b> &lt;'+esc(m.n)+'&gt;')+'<br>'+esc(m.t)+'</div><div class="bub">'+txt+(m.u?'<br>'+ck('u','<span class="lnk mbtn">'+esc(m.u)+'</span>'):'')+'</div></div>';
+ }else{
+  var sub={sms:'Kısa mesaj',wa:'çevrim içi',dm:'Sosyal medya mesajı'}[ch];
+  head='<div class="apph"><span class="av">'+ic+'</span><div class="nm">'+ck('s','<b>'+esc(ch==='dm'?'@'+m.s:m.s)+'</b>')+'<small>'+sub+'</small></div></div>';
+  body='<div class="body"><div class="time">Bugün '+esc(m.t)+'</div><div class="bub">'+txt+(m.u?'<br>'+ck('u','<span class="lnk">'+esc(m.u)+'</span>'):'')+'</div></div>';
+ }
+ var hunting=!c.verdict&&c.taps.length<MAXTAPS;
+ $('phoneWrap').innerHTML='<div class="phone ch-'+ch+(hunting?' hunting':'')+'"><div class="screen"><div class="sbar"><span>'+esc(m.t.replace(/^Dün /,''))+'</span><span>▂▄▆ 🔋</span></div>'+head+body+'</div></div>';
+ var left=MAXTAPS-c.taps.length;
+ $('hunt').textContent=c.verdict?'🔍 İnceleme bitti':(left>0?'🔍 Şüpheli gördüğün yerlere dokun: '+left+' büyüteç hakkın kaldı':'🔍 Büyüteç hakların bitti. Şimdi karar ver!');
+ [].forEach.call($('phoneWrap').querySelectorAll('[data-ck]'),function(el){el.onclick=function(){tap(el.dataset.ck)}});
+ // notlar
+ var notes=c.taps.map(function(id){var w=flagOf(m,id);return w?'<div class="note">🚩 '+esc(w)+'</div>':'<div class="note ok">✔️ Bu kısımda bir sorun yok.</div>'});
+ if(c.verdict){allFlags(m).forEach(function(id){if(c.taps.indexOf(id)<0)notes.push('<div class="note miss">🚩 Gözden kaçan: '+esc(flagOf(m,id))+'</div>')});
+  if(!m.f)notes.push('<div class="note ok">✅ Bu mesajda kırmızı bayrak yok.</div>')}
+ $('notes').innerHTML=notes.join('');
+}
+function tap(id){
+ var c=G.card;if(!c||c.verdict||c.taps.indexOf(id)>=0||c.taps.length>=MAXTAPS)return;
+ c.taps.push(id);save();drawPhone();
+}
+function opt(text,key,fn){var b=document.createElement('button');b.className='choice';b.innerHTML='<span class="k">'+key+'</span><span>'+esc(text)+'</span>';b.onclick=fn;$('choices').appendChild(b);return b}
+function buildChoices(){
+ var c=G.card,keys='ABCD';
+ if(c.type==='msg'){
+  var m=MSG[c.no],labels=['✅ Gerçek, güvenli bir mesaj','🚩 Sahte, dolandırıcılık mesajı'];
+  drawPhone();
+  var btns=c.order.map(function(v,i){return opt(labels[v],keys[i],function(){
+   var right=(v===1)===!!m.f,found=right?foundFlags():0,pts=right?2+found:-2;
+   c.verdict=1;drawPhone();
+   mark(btns,c.order.map(function(x){return x===(m.f?1:0)}),i);
+   $('verdict').innerHTML='<span class="verdict '+(m.f?'fake':'real')+'">'+m.l+'</span>';
+   var head=(right?'Doğru karar!':'Dikkat!')+' Bu mesaj '+(m.f?'sahte.':'gerçek.')+(found?' Bulduğun kırmızı bayraklar: +'+found+'.':'');
+   finish(pts,head,m.w);
+  })});
+ }else if(c.type==='shield'){
+  var sp=SHIELD[c.no];
+  var b=opt('Kalkanımı aldım (+'+sp+' Kalkan Puanı)','🛡️',function(){b.disabled=true;b.classList.add('right');finish(sp,'Kalkan kazanıldı!','Bu kuralı unutma ve yakınlarınla da paylaş.')});
+ }else if(c.type==='surprise'){
+  var s=SUR[c.no];
+  if(s.dice){
+   var db=opt('Zar at','🎲',function(){
+    db.disabled=true;var d=1+Math.floor(Math.random()*6),ok=d>=5;
+    db.innerHTML='<span class="k">'+DIE[d-1]+'</span><span>'+d+' geldi</span>';db.classList.add(ok?'right':'wrong');
+    reveal();finish(ok?2:-2,ok?'Şanslısın: hemen gerekli önlemleri aldın!':'Geç fark ettin.','Telefon kaybolunca hemen bankanı arayıp kartlarını ve uygulamalarını kapattır, hesap şifrelerini değiştir.');
+   });
+  }else{
+   var txt=[s.c,s.x];
+   var sb=c.order.map(function(v,i){return opt(txt[v],keys[i],function(){
+    var right=v===0;mark(sb,c.order.map(function(x){return x===0}),i);reveal();
+    finish(right?s.p[0]:s.p[1],right?'Doğru karar!':'Riskli karar!',right?'Önce durup doğrulamak seni korur.':'Doğrusu: '+s.c+'.');
+   })});
+  }
+ }else if(c.type==='risk'){
+  var r=RISK[c.no];
+  var rb=c.order.map(function(v,i){return opt(r.o[v],keys[i],function(){
+   var right=v===2;mark(rb,c.order.map(function(x){return x===2}),i);reveal();
+   finish(right?3:-3,right?'Doğru karar! En güvenli yol resmî kanaldan doğrulamak.':'Riskli karar!',(right?'':'Doğrusu: '+r.o[2]+'. ')+r.w);
+  })});
+ }else if(c.type==='info'){
+  var q=INFO[c.no];
+  var ib=c.order.map(function(v,i){return opt(q.a[v],keys[i],function(){
+   var right=v===0;mark(ib,c.order.map(function(x){return x===0}),i);
+   finish(right?2:-1,right?'Doğru!':'Yanlış.',(right?'':'Doğru cevap: '+q.a[0]+'. ')+q.w);
+  })});
+ }
+}
+function mark(btns,correct,picked){btns.forEach(function(b,i){b.disabled=true;if(correct[i])b.classList.add('right');else if(i===picked)b.classList.add('wrong')})}
+function reveal(){var cr=$('crop');if(cr){cr.dataset.f=1;cr.style.aspectRatio='auto'}}
+window.dkFit=function(img){var w=img.parentNode,f=+w.dataset.f;if(f<1)w.style.aspectRatio=img.naturalWidth+'/'+Math.round(img.naturalHeight*f)};
+function finish(pts,head,why){
+ var p=G.players[G.turn];
+ p.score=Math.max(0,p.score+pts);
+ G.card.done=true;
+ var fb=$('fb');fb.className='fb show '+(pts>0?'ok':'no');
+ fb.innerHTML='<strong>'+esc(head)+' '+(pts>0?'+':'')+pts+' Kalkan Puanı</strong><br>'+esc(why);
+ var nb=$('nextBtn');nb.classList.remove('hidden');nb.onclick=nextTurn;nb.focus({preventScroll:true});
+ G.status=p.name+': '+(pts>0?'+':'')+pts+' puan.';
+ save(); // sayfa yenilenirse puan iki kez eklenmez: kart "done" olarak kaydedildi
+ renderSide();
+}
+function nextTurn(){
+ $('modal').classList.remove('show');
+ G.turn=(G.turn+1)%G.players.length;G.phase='roll';G.card=null;
+ G.status=G.status+' Sıra: '+G.players[G.turn].name;
+ save();renderBoard();renderSide();$('rollBtn').focus({preventScroll:true});
+}
+
+/* ---------- Bitiş ---------- */
+function renderOver(){
+ var fin=G.players[G.winnerBy];
+ var rk=G.players.map(function(p,i){return {p:p,i:i}}).sort(function(a,b){return b.p.score-a.p.score||b.p.pos-a.p.pos});
+ var top=rk[0].p;
+ var medals=['🥇','🥈','🥉','🏅'];
+ $('over').innerHTML='<div style="font-size:60px">🏆</div><h2>Kazanan: <span style="color:'+top.color+'">'+esc(top.name)+'</span></h2><p>'+esc(fin.name)+' bitişe ulaştı ve +'+FINISH_BONUS+' bonus aldı. Sıralama Kalkan Puanına göre:</p><div class="rank">'+rk.map(function(x,n){return '<div class="rk"><span>'+medals[n]+'</span><i class="tok" style="background:'+x.p.color+'">'+esc(x.p.name.charAt(0).toUpperCase())+'</i><span class="grow">'+esc(x.p.name)+'</span><b>🛡️ '+x.p.score+'</b></div>'}).join('')+'</div><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn good" id="againBtn">Aynı oyuncularla tekrar</button><button class="btn ghost" id="setupBtn">Yeni oyuncular</button></div>';
+ $('againBtn').onclick=function(){var names=G.players.map(function(p){return p.name});count=names.length;savedNames=names.concat(['','','','']).slice(0,4);$('startBtn').onclick()};
+ $('setupBtn').onclick=reset;
+}
+function reset(){G=null;clear();$('modal').classList.remove('show');show()}
+$('newBtn').onclick=function(){if(G&&G.phase!=='over'&&!confirmBox())return;reset()};
+function confirmBox(){return window.confirm('Oyun sıfırlansın mı? Puanlar silinecek.')}
+$('fsBtn').onclick=function(){var d=document.documentElement;if(!document.fullscreenElement){if(d.requestFullscreen)d.requestFullscreen().catch(function(){})}else if(document.exitFullscreen)document.exitFullscreen()};
+window.addEventListener('resize',function(){if(G&&G.phase!=='over')renderBoard()});
+
+/* ---------- Başlat ---------- */
+var saved=load();
+if(saved&&saved.players&&saved.phase){G=saved;if(G.phase==='moving'){G.phase='roll'}
+ // kartı açık bırakılmış oyunu kaldığı yerden aç
+ count=G.players.length;savedNames=G.players.map(function(p){return p.name}).concat(['','','','']).slice(0,4);[].forEach.call($('count').children,function(x){x.classList.toggle('on',+x.dataset.n===count)});renderNames();}
+show();
+})();
+</script>
+</body>
+</html>
